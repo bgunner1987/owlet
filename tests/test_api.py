@@ -61,6 +61,20 @@ async def test_http_200_returns_json():
 
 
 @pytest.mark.asyncio
+async def test_valid_properties_response():
+    properties = [
+        {
+            "property": {
+                "name": "REAL_TIME_VITALS",
+                "value": '{"hr":123,"ox":98}',
+            }
+        }
+    ]
+    api = make_api(FakeResponse(200, properties))
+    assert await api._send("GET", "/dsns/TEST/properties.json", None) == properties
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("status", [400, 404, 429, 500])
 async def test_http_error_has_safe_request_context(status):
     api = make_api(
