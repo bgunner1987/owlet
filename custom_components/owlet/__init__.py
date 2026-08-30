@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from pyowletapi.api import OwletAPI
 from pyowletapi.exceptions import (
     OwletAuthenticationError,
     OwletConnectionError,
@@ -27,6 +26,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from .api import OwletAPI
 from .const import CONF_OWLET_EXPIRY, CONF_OWLET_REFRESH, DOMAIN, SUPPORTED_VERSIONS
 from .coordinator import OwletCoordinator
 

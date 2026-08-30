@@ -6,7 +6,6 @@ from collections.abc import Mapping
 import logging
 from typing import Any
 
-from pyowletapi.api import OwletAPI
 from pyowletapi.exceptions import (
     OwletCredentialsError,
     OwletDevicesError,
@@ -26,6 +25,7 @@ from homeassistant.const import (
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from .api import OwletAPI
 from .const import DOMAIN, POLLING_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
