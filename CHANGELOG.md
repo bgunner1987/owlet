@@ -1,6 +1,11 @@
 # Changelog
 
 <!--next-version-placeholder-->
+## 2026.9.1 (2026-09-01)
+### Fix
+* Handle missing or malformed V3 real-time vitals without failing the integration, retaining recent values for up to 60 seconds before marking them unknown.
+* Ignore malformed sock revision data and make entity property access resilient to missing values.
+
 ## 2025.4.3 (2025-04-15)
 ### Fix
 * Changes to how the sensors are stored to solve the issue where only one device is added, thanks [`@MarjovanLier`](https://github.com/MarjovanLier). ([`1244bff`](https://github.com/ryanbdclark/owlet/commit/1244bffcb48d7337a9d7a0da518959fe4b31a230))
