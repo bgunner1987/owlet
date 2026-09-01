@@ -106,11 +106,13 @@ async def async_setup_entry(
 
     sensors = []
     for coordinator in coordinators:
-        sensors.extend([
-            OwletBinarySensor(coordinator, sensor)
-            for sensor in SENSORS
-            if sensor.key in coordinator.sock.properties
-        ])
+        sensors.extend(
+            [
+                OwletBinarySensor(coordinator, sensor)
+                for sensor in SENSORS
+                if sensor.key in coordinator.sock.properties
+            ]
+        )
 
         if OwletAwakeSensor.entity_description.key in coordinator.sock.properties:
             sensors.append(OwletAwakeSensor(coordinator))
@@ -135,15 +137,15 @@ class OwletBinarySensor(OwletBaseEntity, BinarySensorEntity):
     def available(self) -> bool:
         """Return if entity is available."""
         return super().available and (
-            not self.sock.properties["charging"]
+            not self.sock.properties.get("charging")
             or self.entity_description.available_during_charging
         )
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
 
-        return self.sock.properties[self.entity_description.key]
+        return self.sock.properties.get(self.entity_description.key)
 
 
 class OwletAwakeSensor(OwletBinarySensor):
@@ -164,6 +166,7 @@ class OwletAwakeSensor(OwletBinarySensor):
         super().__init__(coordinator, self.entity_description)
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        return self.sock.properties[self.entity_description.key] not in [8, 15]
+        sleep_state = self.sock.properties.get(self.entity_description.key)
+        return None if sleep_state is None else sleep_state not in [8, 15]

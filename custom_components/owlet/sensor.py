@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -115,11 +116,13 @@ async def async_setup_entry(
     sensors = []
 
     for coordinator in coordinators:
-        sensors.extend([
-            OwletSensor(coordinator, sensor)
-            for sensor in SENSORS
-            if sensor.key in coordinator.sock.properties
-        ])
+        sensors.extend(
+            [
+                OwletSensor(coordinator, sensor)
+                for sensor in SENSORS
+                if sensor.key in coordinator.sock.properties
+            ]
+        )
 
         if OwletSleepSensor.entity_description.key in coordinator.sock.properties:
             sensors.append(OwletSleepSensor(coordinator))
@@ -149,7 +152,7 @@ class OwletSensor(OwletBaseEntity, SensorEntity):
     def available(self) -> bool:
         """Return if entity is available."""
         return super().available and (
-            not self.sock.properties["charging"]
+            not self.sock.properties.get("charging")
             or self.entity_description.available_during_charging
         )
 
@@ -157,13 +160,13 @@ class OwletSensor(OwletBaseEntity, SensorEntity):
     def native_value(self) -> StateType:
         """Return sensor value."""
 
-        return self.sock.properties[self.entity_description.key]
+        return self.sock.properties.get(self.entity_description.key)
 
 
 class OwletSleepSensor(OwletSensor):
     """Representation of an Owlet sleep sensor."""
 
-    _attr_options = list(SLEEP_STATES.values())
+    _attr_options: ClassVar[list[str]] = list(SLEEP_STATES.values())
     entity_description = OwletSensorEntityDescription(
         key="sleep_state",
         translation_key="sleepstate",
@@ -181,7 +184,7 @@ class OwletSleepSensor(OwletSensor):
     @property
     def native_value(self) -> StateType:
         """Return sensor value."""
-        return SLEEP_STATES[self.sock.properties["sleep_state"]]
+        return SLEEP_STATES.get(self.sock.properties.get("sleep_state"))
 
 
 class OwletOxygenAverageSensor(OwletSensor):
@@ -206,14 +209,7 @@ class OwletOxygenAverageSensor(OwletSensor):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
+        value = self.sock.properties.get("oxygen_10_av")
         return (
-            super().available
-            and (
-                not self.sock.properties["charging"]
-                or self.entity_description.available_during_charging
-            )
-            and (
-                self.sock.properties["oxygen_10_av"] >= 0
-                and self.sock.properties["oxygen_10_av"] <= 100
-            )
+            super().available and isinstance(value, (int, float)) and 0 <= value <= 100
         )
