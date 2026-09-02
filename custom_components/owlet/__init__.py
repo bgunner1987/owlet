@@ -10,7 +10,6 @@ from homeassistant.const import (
     CONF_API_TOKEN,
     CONF_REGION,
     CONF_SCAN_INTERVAL,
-    CONF_USERNAME,
     Platform,
 )
 from homeassistant.core import HomeAssistant
@@ -54,14 +53,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     except (OwletAuthenticationError, OwletEmailError, OwletPasswordError) as err:
         _LOGGER.error("Credentials no longer valid, please setup owlet again")
-        raise ConfigEntryAuthFailed(
-            f"Credentials expired for {entry.data[CONF_USERNAME]}"
-        ) from err
+        raise ConfigEntryAuthFailed("Owlet credentials expired") from err
 
     except OwletConnectionError as err:
-        raise ConfigEntryNotReady(
-            f"Error connecting to {entry.data[CONF_USERNAME]}"
-        ) from err
+        raise ConfigEntryNotReady("Error connecting to Owlet") from err
 
     except OwletDevicesError:
         _LOGGER.error("No owlet devices found to set up")

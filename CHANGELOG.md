@@ -1,6 +1,13 @@
 # Changelog
 
 <!--next-version-placeholder-->
+## 2026.9.2 (2026-09-02)
+### Fix
+* Stop validating a current local token through `/devices.json` before every API request.
+* Refresh once and replay once only after an actual HTTP 401 or 403 response.
+* Retry HTTP 429, selected 5xx responses, network failures, and timeouts with two bounded backoffs.
+* Accept successful 2xx responses, including bodyless HTTP 204 commands, and add safe request context without credentials, email addresses, or device serial numbers.
+
 ## 2026.9.1 (2026-09-01)
 ### Fix
 * Handle missing or malformed V3 real-time vitals without failing the integration, retaining recent values for up to 60 seconds before marking them unknown.
