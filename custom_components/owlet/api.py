@@ -383,6 +383,23 @@ class OwletAPI(PyOwletAPI):
         await self._operation_request("validate_authentication", "GET", "/devices.json")
         self._legacy_failure_reported = False
 
+    async def _is_valid_version(self, dsn: str, versions: list[int]) -> bool:
+        """Check a device version without consuming tokens needed by discovery."""
+        properties = await self.get_properties(dsn)
+        properties_item = properties["response"]
+        if "REAL_TIME_VITALS" in properties_item:
+            valid = 3 in versions
+        elif "CHARGE_STATUS" in properties_item:
+            valid = 2 in versions
+        else:
+            valid = False
+
+        if "tokens" in properties:
+            # This internal caller cannot persist credentials. Leave the refresh
+            # pending so inherited get_devices() returns it to Home Assistant.
+            self._tokens_changed = True
+        return valid
+
     async def activate(
         self, device_serial: str, *, _reset_legacy_phase: bool = True
     ) -> None:
