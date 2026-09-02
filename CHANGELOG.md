@@ -1,6 +1,10 @@
 # Changelog
 
 <!--next-version-placeholder-->
+## 2026.9.3 (2026-09-02)
+### Fix
+* Preserve refreshed tokens across device discovery and version checks so Home Assistant can persist them reliably.
+
 ## 2026.9.2 (2026-09-02)
 ### Fix
 * Stop validating a current local token through `/devices.json` before every API request.
