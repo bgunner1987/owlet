@@ -19,6 +19,7 @@ from custom_components.owlet.api import (
     OwletAPIRequestError,
     OwletLegacyRequestError,
 )
+from custom_components.owlet.sock import Sock
 
 _VALID_PROPERTIES = [
     {
@@ -435,6 +436,115 @@ async def test_get_devices_and_version_check_use_local_requests() -> None:
         ),
         ("GET", "/dsns/TEST-SERIAL/properties.json"),
     ]
+
+
+@pytest.mark.asyncio
+async def test_successful_device_discovery_without_refresh_has_no_tokens() -> None:
+    """Discovery with current credentials does not report unchanged tokens."""
+    devices = [{"device": {"dsn": "TEST-SERIAL"}}]
+    api, session, _sleep = make_api(
+        FakeResponse(200, devices),
+        FakeResponse(204),
+        FakeResponse(200, _VALID_PROPERTIES),
+    )
+    api.refresh_authentication = AsyncMock()
+
+    result = await api.get_devices([3])
+
+    assert result == {"response": devices}
+    assert api._tokens_changed is False
+    api.refresh_authentication.assert_not_awaited()
+    assert paths(api, session) == [
+        "/devices.json",
+        "/dsns/TEST-SERIAL/properties/APP_ACTIVE/datapoints.json",
+        "/dsns/TEST-SERIAL/properties.json",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_device_request_refresh_survives_version_check() -> None:
+    """A refresh for /devices.json reaches the discovery caller exactly once."""
+    devices = [{"device": {"dsn": "TEST-SERIAL"}}]
+    api, session, _sleep = make_api(
+        FakeResponse(401),
+        FakeResponse(200, devices),
+        FakeResponse(204),
+        FakeResponse(200, _VALID_PROPERTIES),
+        FakeResponse(204),
+        FakeResponse(200, _VALID_PROPERTIES),
+    )
+    api.refresh_authentication = successful_refresh(api)
+
+    discovered = await api.get_devices([3])
+    later_poll = await api.get_properties("TEST-SERIAL")
+
+    assert discovered == {"response": devices, "tokens": api.tokens}
+    assert "tokens" not in later_poll
+    assert api._tokens_changed is False
+    api.refresh_authentication.assert_awaited_once()
+    assert paths(api, session) == [
+        "/devices.json",
+        "/devices.json",
+        "/dsns/TEST-SERIAL/properties/APP_ACTIVE/datapoints.json",
+        "/dsns/TEST-SERIAL/properties.json",
+        "/dsns/TEST-SERIAL/properties/APP_ACTIVE/datapoints.json",
+        "/dsns/TEST-SERIAL/properties.json",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_version_property_refresh_reaches_device_discovery() -> None:
+    """A refresh during the internal version check is returned by discovery."""
+    devices = [{"device": {"dsn": "TEST-SERIAL"}}]
+    api, session, _sleep = make_api(
+        FakeResponse(200, devices),
+        FakeResponse(204),
+        FakeResponse(401),
+        FakeResponse(200, _VALID_PROPERTIES),
+    )
+    api.refresh_authentication = successful_refresh(api)
+
+    result = await api.get_devices([3])
+
+    assert result == {"response": devices, "tokens": api.tokens}
+    assert api._tokens_changed is False
+    api.refresh_authentication.assert_awaited_once()
+    assert paths(api, session) == [
+        "/devices.json",
+        "/dsns/TEST-SERIAL/properties/APP_ACTIVE/datapoints.json",
+        "/dsns/TEST-SERIAL/properties.json",
+        "/dsns/TEST-SERIAL/properties.json",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_property_poll_refresh_reaches_sock_once_without_device_probe() -> None:
+    """Sock forwards refreshed credentials once and later polls stay token-free."""
+    api, session, _sleep = make_api(
+        FakeResponse(204),
+        FakeResponse(401),
+        FakeResponse(200, _VALID_PROPERTIES),
+        FakeResponse(204),
+        FakeResponse(200, _VALID_PROPERTIES),
+    )
+    api.refresh_authentication = successful_refresh(api)
+    sock = Sock(api, {"dsn": "TEST-SERIAL"})
+
+    refreshed = await sock.update_properties()
+    later_poll = await sock.update_properties()
+
+    assert refreshed["tokens"] == api.tokens
+    assert "tokens" not in later_poll
+    assert api._tokens_changed is False
+    api.refresh_authentication.assert_awaited_once()
+    assert paths(api, session) == [
+        "/dsns/TEST-SERIAL/properties/APP_ACTIVE/datapoints.json",
+        "/dsns/TEST-SERIAL/properties.json",
+        "/dsns/TEST-SERIAL/properties.json",
+        "/dsns/TEST-SERIAL/properties/APP_ACTIVE/datapoints.json",
+        "/dsns/TEST-SERIAL/properties.json",
+    ]
+    assert "/devices.json" not in paths(api, session)
 
 
 @pytest.mark.asyncio
